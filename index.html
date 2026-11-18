@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>海风城市冲刺 · COASTAL CITY SPRINT</title>
+<meta name="description" content="海风城市冲刺——打开即玩的伪3D海岸跑酷：从明亮海边公路出发，穿过城市高架，闯过夜间灯牌街区，冲过1000m终点线。">
+<meta name="theme-color" content="#37a3f5">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232fa1ef'/%3E%3Cpath d='M8 40 q8 -8 16 0 t16 0 t16 0' fill='none' stroke='%23eaf9ff' stroke-width='5' stroke-linecap='round'/%3E%3Ccircle cx='44' cy='20' r='9' fill='%23ffd166'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <!-- ====== 场景层 ====== -->
+  <div id="scene" aria-hidden="true">
+    <!-- 天空：太阳 / 月亮 / 星 / 云 / 海鸥 -->
+    <div class="sky">
+      <div class="sun"></div>
+      <div class="moon"></div>
+      <div class="stars" id="stars"></div>
+      <div class="cloud c1"></div>
+      <div class="cloud c2"></div>
+      <div class="cloud c3"></div>
+      <svg class="gull g1" viewBox="0 0 60 24"><path d="M2 14 Q16 2 30 13 Q44 2 58 14" fill="none" stroke="#eaf6ff" stroke-width="3.4" stroke-linecap="round"/></svg>
+      <svg class="gull g2" viewBox="0 0 60 24"><path d="M2 14 Q16 2 30 13 Q44 2 58 14" fill="none" stroke="#eaf6ff" stroke-width="3" stroke-linecap="round"/></svg>
+    </div>
+
+    <!-- 视差天际线：海滨远岛 / 高架城市 / 霓虹街区（JS 生成） -->
+    <div class="skyline sky-a"><svg id="sky-a-svg" preserveAspectRatio="none"></svg></div>
+    <div class="skyline sky-b"><svg id="sky-b-svg" preserveAspectRatio="none"></svg></div>
+    <div class="skyline sky-c"><svg id="sky-c-svg" preserveAspectRatio="none"></svg></div>
+
+    <!-- 地平线薄雾带 -->
+    <div class="haze"></div>
+
+    <!-- 地面 / 道路（透视多边形，JS 逐帧更新） -->
+    <svg id="road-svg" preserveAspectRatio="none">
+      <polygon id="pg-seaL"  class="pp-sea"/>
+      <polygon id="pg-seaR"  class="pp-sea"/>
+      <polygon id="pg-sandL" class="pp-sand"/>
+      <polygon id="pg-sandR" class="pp-sand"/>
+      <polygon id="pg-shoulder" class="pp-shoulder"/>
+      <polygon id="pg-road"  class="pp-road"/>
+      <polygon id="pg-edgeA" class="pp-edgeA"/>
+      <polygon id="pg-edgeB" class="pp-edgeB"/>
+      <polygon id="pg-glossL" class="pp-glossL"/>
+      <polygon id="pg-glossR" class="pp-glossR"/>
+    </svg>
+
+    <!-- 跑道实体：车道虚线、棕榈、护栏、路灯、广告牌、海浪波光等（JS 投影） -->
+    <div id="scenery"></div>
+
+    <!-- 游戏实体：障碍 / 能量币 / 终点拱门 / 特效 -->
+    <div id="entities"></div>
+
+    <!-- 玩家 -->
+    <div id="player-wrap">
+      <div class="p-shadow" id="p-shadow"></div>
+      <div id="player">
+        <svg class="runner" id="runner" viewBox="0 0 120 200" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="tank" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#2fc2e0"/>
+              <stop offset="1" stop-color="#1b8fb4"/>
+            </linearGradient>
+          </defs>
+          <!-- 腿（髋部为轴） -->
+          <g class="leg leg-l">
+            <g class="thigh">
+              <rect x="42" y="100" width="15" height="46" rx="7.5" fill="#e8a06b"/>
+              <g class="shin">
+                <rect x="43" y="140" width="13" height="40" rx="6.5" fill="#e8a06b"/>
+                <rect x="42" y="168" width="15" height="9" rx="4" fill="#f6f9ff"/>
+                <rect x="39" y="176" width="21" height="11" rx="5.5" fill="#ff6b57"/>
+              </g>
+            </g>
+          </g>
+          <g class="leg leg-r">
+            <g class="thigh">
+              <rect x="63" y="100" width="15" height="46" rx="7.5" fill="#f2b184"/>
+              <g class="shin">
+                <rect x="64" y="140" width="13" height="40" rx="6.5" fill="#f2b184"/>
+                <rect x="63" y="168" width="15" height="9" rx="4" fill="#f6f9ff"/>
+                <rect x="60" y="176" width="21" height="11" rx="5.5" fill="#ff6b57"/>
+              </g>
+            </g>
+          </g>
+          <!-- 短裤 + 躯干背心 -->
+          <path d="M40 96 h40 l-3 22 h-12 l-5 -12 -5 12 h-12 z" fill="#27405e"/>
+          <rect x="38" y="54" width="44" height="50" rx="14" fill="url(#tank)" stroke="#f6f9ff" stroke-width="2.4"/>
+          <path d="M46 58 v42" stroke="#f6f9ff" stroke-width="3" opacity=".7"/>
+          <!-- 背包带 -->
+          <path d="M44 56 l6 44 M76 56 l-6 44" stroke="#27405e" stroke-width="5" fill="none" opacity=".85"/>
+          <!-- 手臂（肩部为轴） -->
+          <g class="arm arm-l">
+            <g class="u-arm">
+              <rect x="25" y="58" width="13" height="38" rx="6.5" fill="#e8a06b"/>
+              <g class="f-arm">
+                <rect x="25" y="90" width="11" height="34" rx="5.5" fill="#d8915c"/>
+              </g>
+            </g>
+          </g>
+          <g class="arm arm-r">
+            <g class="u-arm">
+              <rect x="82" y="58" width="13" height="38" rx="6.5" fill="#f2b184"/>
+              <g class="f-arm">
+                <rect x="84" y="90" width="11" height="34" rx="5.5" fill="#e8a06b"/>
+              </g>
+            </g>
+          </g>
+          <!-- 头部：棒球帽 + 墨镜 -->
+          <g class="head">
+            <circle cx="60" cy="32" r="17" fill="#f2b184"/>
+            <path d="M44 30 a17 17 0 0 1 32 -6 l-32 2 z" fill="#ff6b57"/>
+            <path d="M44 29 h30" stroke="#e2573f" stroke-width="2.4"/>
+            <rect x="42" y="27" width="14" height="5" rx="2.5" fill="#e2573f"/>
+            <path d="M50 36 a6 5 0 0 0 9 0 z" fill="#3a2c22"/>
+            <circle cx="47" cy="37" r="4.6" fill="#2c2c34"/>
+            <circle cx="61" cy="37" r="4.6" fill="#2c2c34"/>
+            <path d="M42 36 h10 M56 36 h10" stroke="#1e1e26" stroke-width="2.2"/>
+            <path d="M74 24 q9 -2 10 6" stroke="#3a2c22" stroke-width="3" fill="none" stroke-linecap="round"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- 速度线 / 暗角 / 碰撞闪光 / 冲线彩带 -->
+    <div class="speedlines" id="speedlines">
+      <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+    </div>
+    <div class="vignette"></div>
+    <div class="crash-flash" id="crash-flash"></div>
+    <div id="confetti"></div>
+  </div>
+
+  <!-- ====== HUD ====== -->
+  <header id="hud" class="hidden">
+    <div class="hud-box hud-left">
+      <div class="hud-dist"><span id="hud-dist">0</span><small>/1000m</small></div>
+      <div class="hud-stage" id="hud-stage">海滨公路</div>
+    </div>
+    <div class="hud-progress">
+      <div class="prog-track">
+        <span class="prog-fill" id="prog-fill"></span>
+        <span class="prog-tick t1"></span>
+        <span class="prog-tick t2"></span>
+        <span class="prog-flag">🏁</span>
+      </div>
+      <div class="prog-labels"><i>海边 0m</i><i>高架 300</i><i>街区 700</i><i>终点 1000</i></div>
+    </div>
+    <div class="hud-box hud-right">
+      <div class="hud-speed"><span id="hud-speed">0</span><small>km/h</small></div>
+      <div class="hud-time"><span id="hud-time">0.0s</span></div>
+      <div class="hud-coin" id="hud-coin-box"><i class="coin-ico"></i><span id="hud-coin">0</span></div>
+    </div>
+  </header>
+  <button id="btn-mute" class="icon-btn" aria-label="声音开关" title="声音开关">🔊</button>
+  <p id="hint" class="hidden">← → 切换轨道 · 空格 跳跃</p>
+  <div id="stage-banner" class="hidden"><b id="stage-banner-text">第 1 段 · 海滨公路</b></div>
+
+  <!-- ====== 移动端按钮 ====== -->
+  <div id="controls">
+    <div class="ctrl-side">
+      <button id="btn-left" class="ctrl-btn" aria-label="左移">◀</button>
+      <button id="btn-right" class="ctrl-btn" aria-label="右移">▶</button>
+    </div>
+    <button id="btn-jump" class="ctrl-btn ctrl-jump" aria-label="跳跃">▲<span>跳</span></button>
+  </div>
+
+  <!-- ====== 开始界面 ====== -->
+  <section id="overlay-start" class="overlay">
+    <div class="title-block">
+      <h1 class="game-title"><span class="t-sea">海风城市</span><span class="t-sprint">冲刺</span></h1>
+      <p class="game-sub">COASTAL CITY SPRINT · 1000m</p>
+    </div>
+    <div class="start-panel">
+      <p class="start-desc">从明亮的海边公路出发，穿过城市高架，<br>闯过夜间灯牌街区，冲过 1000m 终点拱门！</p>
+      <div class="stage-legend">
+        <span class="lg lg1">0–300m 海滨公路</span>
+        <span class="lg lg2">300–700m 城市高架</span>
+        <span class="lg lg3">700–1000m 灯牌街区</span>
+      </div>
+      <button id="btn-start" class="big-btn">开始冲刺</button>
+      <p class="ctrl-tip show-touch">屏幕按钮：◀ ▶ 切换轨道 · ▲ 跳跃（也支持滑动）</p>
+      <p class="ctrl-tip show-key">键盘：← → 切换轨道 · 空格 跳跃</p>
+      <p class="best-line" id="best-line-start"></p>
+    </div>
+  </section>
+
+  <!-- ====== 失败界面 ====== -->
+  <section id="overlay-fail" class="overlay hidden">
+    <div class="card fail-card">
+      <p class="card-cap">撞到障碍，冲刺中断</p>
+      <div class="stat-rows">
+        <div class="stat-row"><span>已跑距离</span><b id="fl-dist">0 m</b></div>
+        <div class="stat-row"><span>能量币</span><b id="fl-coin">0</b></div>
+        <div class="stat-row"><span>躲避障碍</span><b id="fl-dodge">0</b></div>
+        <div class="stat-row"><span>事发路段</span><b id="fl-stage">海滨公路</b></div>
+      </div>
+      <button id="btn-retry" class="big-btn">重新开始</button>
+      <button id="btn-home-1" class="ghost-btn">回到标题</button>
+    </div>
+  </section>
+
+  <!-- ====== 完成界面 ====== -->
+  <section id="overlay-win" class="overlay hidden">
+    <div class="card win-card">
+      <p class="card-cap">🏆 冲过终点 · 1000m 完成</p>
+      <div class="grade" id="grade">S</div>
+      <p class="grade-line" id="grade-line">完美海岸冲刺！</p>
+      <div class="stat-rows">
+        <div class="stat-row"><span>用时</span><b id="wn-time">0.0 s</b></div>
+        <div class="stat-row"><span>能量币</span><b id="wn-coin">0 / 0</b></div>
+        <div class="stat-row"><span>躲避障碍</span><b id="wn-dodge">0</b></div>
+        <div class="stat-row best"><span>最佳用时</span><b id="wn-best">--</b></div>
+      </div>
+      <p class="new-record hidden" id="new-record">★ 新纪录！★</p>
+      <button id="btn-again" class="big-btn">再跑一次</button>
+      <button id="btn-home-2" class="ghost-btn">回到标题</button>
+    </div>
+  </section>
+</div>
+<noscript><p style="color:#fff;text-align:center;padding:2em">需要启用 JavaScript 才能游玩海风城市冲刺。</p></noscript>
+<script src="script.js"></script>
+</body>
+</html>
